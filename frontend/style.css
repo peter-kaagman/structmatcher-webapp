@@ -1,0 +1,35 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 2em;
+    background: #f7f7f7;
+}
+h1 {
+    color: #2c3e50;
+}
+form {
+    background: #fff;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    max-width: 400px;
+}
+label {
+    display: block;
+    margin-bottom: 1em;
+}
+button {
+    background: #2980b9;
+    color: #fff;
+    border: none;
+    padding: 0.5em 1.5em;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#result {
+    margin-top: 2em;
+    padding: 1em;
+    background: #eafaf1;
+    border-radius: 8px;
+    color: #27ae60;
+    font-weight: bold;
+}

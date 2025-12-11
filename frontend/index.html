@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StructMatcher Webapp</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>StructMatcher ConditionSet Tester</h1>
+    <form id="uploadForm">
+        <label>ConditionSet JSON:
+            <input type="file" id="conditionSetFile" accept="application/json">
+        </label>
+        <br>
+        <label>Persoonsgegevens JSON:
+            <input type="file" id="personFile" accept="application/json">
+        </label>
+        <br>
+        <button type="submit">Test ConditionSet</button>
+    </form>
+    <div id="result"></div>
+    <script src="app.js"></script>
+</body>
+</html>

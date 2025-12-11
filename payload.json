@@ -1,0 +1,25 @@
+{
+  "conditionSet": [
+    {
+      "conditions": [
+        {
+          "level": ["PrimaryContract", "Custom", "PersonType"],
+          "operator": "Equals",
+          "check": "OOP"
+        },
+        {
+          "level": ["PrimaryContract", "Location", "Code"],
+          "operator": "Equals",
+          "check": "ASC"
+        },
+        {
+          "level": ["PrimaryContract", "Title", "Name"],
+          "operator": "NotContains",
+          "check": "Adviseur"
+        }
+      ],
+      "result": "oopers-asc@atlascollege.nl"
+    }
+  ],
+  "personData": REPLACE_WITH_PERSON_JSON
+}
