@@ -1,0 +1,11 @@
+{
+  "name": "structmatcher-webapp",
+  "version": "1.0.0",
+  "description": "StructMatcher webapp en Azure Function testomgeving",
+  "scripts": {
+    "start:func": "npx func start"
+  },
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.0.0"
+  }
+}

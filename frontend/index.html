@@ -8,18 +8,29 @@
 </head>
 <body>
     <h1>StructMatcher ConditionSet Tester</h1>
-    <form id="uploadForm">
+    <form id="uploadForm" style="max-width:900px;">
         <label>ConditionSet JSON:
             <input type="file" id="conditionSetFile" accept="application/json">
         </label>
         <br>
-        <label>Persoonsgegevens JSON:
-            <input type="file" id="personFile" accept="application/json">
-        </label>
+        <label>Bewerk ConditionSet:</label><br>
+        <textarea id="conditionSetEditor" style="display:none;">{
+      "example": "Vul hier je ConditionSet JSON in"
+    }</textarea>
+        <div id="codeMirrorEditor" style="height: 350px; width: 100%; border: 1px solid #ccc; background: #f8f8ff;"></div>
+        <br>
+        <label for="maxPersons">Aantal te checken personen (0 = alles):</label>
+        <input type="number" id="maxPersons" min="0" value="0" style="width:80px;">
         <br>
         <button type="submit">Test ConditionSet</button>
+        <button type="button" id="downloadConditionSet">Download ConditionSet</button>
     </form>
     <div id="result"></div>
+    <!-- CodeMirror 5 via CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
