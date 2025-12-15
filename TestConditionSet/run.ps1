@@ -89,7 +89,7 @@ if (Test-Path $localPath) {
 } else {
     Write-Host "Azure: lees uit Blob Storage container 'persons'"
     # Vereist: Azure.Storage.Blobs module in requirements.psd1
-    $connectionString = $env['AzureWebJobsStorage']
+    $connectionString = $env:AzureWebJobsStorage
     if (-not $connectionString) {
         throw "AzureWebJobsStorage environment variable niet gevonden."
     }
