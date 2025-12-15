@@ -55,41 +55,75 @@ if ($null -eq $conditionSet) {
 }
 
 
-# Zoek alle JSON-bestanden in de root van TestPersons (of submap indien gewenst)
-$testPersonsPath = "$PSScriptRoot/../TestPersons/blaat"
-$personFiles = Get-ChildItem -Path $testPersonsPath -Filter *.json -File
 
-# Beperk het aantal te checken bestanden indien maxPersons > 0
-if ($maxPersons -gt 0) {
-    $personFiles = $personFiles | Select-Object -First $maxPersons
-}
-Write-Host "Found $($personFiles.Count) person files to process."
-
+# Hybride: lokaal of uit Azure Blob Storage
 $results = @()
-foreach ($personFile in $personFiles) {
-    try {
-        # Write-Host "Processing file: $($personFile.Name)"
-        $personData = Get-Content $personFile.FullName -Raw | ConvertFrom-Json
-        # Write-Host "PersonType: $($personData.PrimaryContract.Custom.PersonType)"
-        # Write-Host "PersonLocation: $($personData.PrimaryContract.Location.Code)"
-        foreach ($set in $conditionSet) {
-            # Write-Host "Applying condition set: $($set|ConvertTo-Json -Depth 5)"
-            $output = Test-ConditionSet -rules $set -data $personData
-            if ($output) {
-                Write-Host "MATCH for $($personFile.Name): $($personData.DisplayName) with result: $($set.result)"
-                $results += [PSCustomObject]@{
-                    File = $personFile.Name
-                    DisplayName = $personData.DisplayName
-                    Match = $output
+$localPath = "$PSScriptRoot/../TestPersons/blaat"
+if (Test-Path $localPath) {
+    Write-Host "Lokaal: gebruik $localPath"
+    $personFiles = Get-ChildItem -Path $localPath -Filter *.json -File
+    if ($maxPersons -gt 0) {
+        $personFiles = $personFiles | Select-Object -First $maxPersons
+    }
+    Write-Host "Found $($personFiles.Count) person files to process."
+    foreach ($personFile in $personFiles) {
+        try {
+            $personData = Get-Content $personFile.FullName -Raw | ConvertFrom-Json
+            foreach ($set in $conditionSet) {
+                $output = Test-ConditionSet -rules $set -data $personData
+                if ($output) {
+                    $results += [PSCustomObject]@{
+                        File = $personFile.Name
+                        DisplayName = $personData.DisplayName
+                        Match = $output
+                    }
                 }
-            # } else {
-            #     Write-Host "NO MATCH for $($personFile.Name) with set: $($set|ConvertTo-Json -Depth 5)"
+            }
+        } catch {
+            $results += [PSCustomObject]@{
+                File = $personFile.Name
+                Error = $_.Exception.Message
             }
         }
-    } catch {
-        $results += [PSCustomObject]@{
-            File = $personFile.Name
-            Error = $_.Exception.Message
+    }
+} else {
+    Write-Host "Azure: lees uit Blob Storage container 'persons'"
+    # Vereist: Azure.Storage.Blobs module in requirements.psd1
+    $connectionString = $env['AzureWebJobsStorage']
+    if (-not $connectionString) {
+        throw "AzureWebJobsStorage environment variable niet gevonden."
+    }
+    $blobServiceClient = [Azure.Storage.Blobs.BlobServiceClient]::new($connectionString)
+    $containerClient = $blobServiceClient.GetBlobContainerClient('persons')
+    $blobs = $containerClient.GetBlobs() | Where-Object { $_.Name -like '*.json' }
+    if ($maxPersons -gt 0) {
+        $blobs = $blobs | Select-Object -First $maxPersons
+    }
+    Write-Host "Found $($blobs.Count) blobs to process."
+    foreach ($blob in $blobs) {
+        try {
+            $blobClient = $containerClient.GetBlobClient($blob.Name)
+            $stream = New-Object System.IO.MemoryStream
+            $blobClient.DownloadTo($stream)
+            $stream.Position = 0
+            $reader = New-Object System.IO.StreamReader($stream)
+            $json = $reader.ReadToEnd()
+            $personData = $json | ConvertFrom-Json
+            foreach ($set in $conditionSet) {
+                $output = Test-ConditionSet -rules $set -data $personData
+                if ($output) {
+                    $results += [PSCustomObject]@{
+                        File = $blob.Name
+                        DisplayName = $personData.DisplayName
+                        Match = $output
+                    }
+                }
+            }
+        } catch {
+            $results += [PSCustomObject]@{
+                File = $blob.Name
+                Error = $_.Exception.Message
+            }
         }
     }
 }
