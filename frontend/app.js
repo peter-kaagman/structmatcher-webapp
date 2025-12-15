@@ -69,7 +69,14 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
     const maxPersons = parseInt(document.getElementById('maxPersons').value, 10) || 0;
     console.log('conditionSet:', conditionSet);
     console.log('maxPersons:', maxPersons);
-    const response = await fetch('http://localhost:7071/api/TestConditionSet', {
+    // Bepaal API URL afhankelijk van omgeving
+    let apiUrl = '';
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        apiUrl = 'http://localhost:7071/api/TestConditionSet';
+    } else {
+        apiUrl = 'https://structmatcher-func.azurewebsites.net/api/TestConditionSet';
+    }
+    const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conditionSet, maxPersons })
