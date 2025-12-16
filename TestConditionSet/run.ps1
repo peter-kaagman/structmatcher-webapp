@@ -43,9 +43,9 @@ if ($body -and $body.maxPersons -ne $null) {
 }
 
 # Importeer StructMatcher module
-Import-Module "$PSScriptRoot/../PS-Modules/StructMatcher/StructMatcher.psm1"
+Import-Module "$PSScriptRoot/../PS-Modules/StructMatcher/StructMatcher.psm1" -verbose $true
 # Importeer Blob storage module
-Import-Module 'Azure.Storage.Blobs'
+Import-Module 'Azure.Storage.Blobs' -Verbose $true
 
 
 # Sta toe dat conditionSet een enkele set of een array is
