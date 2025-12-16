@@ -89,7 +89,6 @@ if (Test-Path $localPath) {
     }
 } else {
     Write-Host "Azure: lees uit Blob Storage container 'persons'"
-    # Vereist: Azure.Storage.Blobs module in requirements.psd1
     $connectionString = $env:AzureWebJobsStorage
     Write-Host "AzureWebJobsStorage: $connectionString"
     if (-not $connectionString) {
@@ -101,7 +100,6 @@ if (Test-Path $localPath) {
     $container = 'persons'
     $blobServiceUrl = "https://$accountName.blob.core.windows.net/$container?restype=container&comp=list"
     $headers = @{}
-    # Build Shared Key authorization header
     function Get-BlobAuthHeader {
         param($method, $url, $accountName, $accountKey)
         $uri = [System.Uri]$url
