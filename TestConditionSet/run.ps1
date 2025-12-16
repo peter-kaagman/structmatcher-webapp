@@ -42,10 +42,9 @@ if ($body -and $body.maxPersons -ne $null) {
     Write-Host "maxPersons NIET aanwezig in body"
 }
 
+
 # Importeer StructMatcher module
-Import-Module "$PSScriptRoot/../PS-Modules/StructMatcher/StructMatcher.psm1" 
-# Importeer Az.Storage module
-Import-Module Az.Storage 
+Import-Module "$PSScriptRoot/../PS-Modules/StructMatcher/StructMatcher.psm1" -Verbose
 
 
 # Sta toe dat conditionSet een enkele set of een array is
@@ -96,22 +95,51 @@ if (Test-Path $localPath) {
     if (-not $connectionString) {
         throw "AzureWebJobsStorage environment variable niet gevonden."
     }
-    $ctx = New-AzStorageContext -ConnectionString $connectionString
-    $blobs = Get-AzStorageBlob -Container 'persons' -Context $ctx | Where-Object { $_.Name -like '*.json' }
-    if ($maxPersons -gt 0) {
-        $blobs = $blobs | Select-Object -First $maxPersons
+    # Parse connection string for account name and key
+    $accountName = ($connectionString -split ";") | Where-Object { $_ -like "AccountName=*" } | ForEach-Object { $_.Split("=")[1] }
+    $accountKey = ($connectionString -split ";") | Where-Object { $_ -like "AccountKey=*" } | ForEach-Object { $_.Split("=")[1] }
+    $container = 'persons'
+    $blobServiceUrl = "https://$accountName.blob.core.windows.net/$container?restype=container&comp=list"
+    $headers = @{}
+    # Build Shared Key authorization header
+    function Get-BlobAuthHeader {
+        param($method, $url, $accountName, $accountKey)
+        $uri = [System.Uri]$url
+        $now = [DateTime]::UtcNow.ToString("R")
+        $canonicalizedResource = "/$accountName/$container"
+        $stringToSign = "$method`n`n`n`n`n`n`n`n`n`n`n`n$now`n$canonicalizedResource?comp=list&restype=container"
+        $hmac = New-Object System.Security.Cryptography.HMACSHA256
+        $hmac.Key = [Convert]::FromBase64String($accountKey)
+        $signature = [Convert]::ToBase64String($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($stringToSign)))
+        "SharedKey $accountName:$signature"
     }
-    Write-Host "Found $($blobs.Count) blobs to process."
-    foreach ($blob in $blobs) {
+    $headers['x-ms-date'] = [DateTime]::UtcNow.ToString("R")
+    $headers['x-ms-version'] = '2020-10-02'
+    $headers['Authorization'] = Get-BlobAuthHeader -method 'GET' -url $blobServiceUrl -accountName $accountName -accountKey $accountKey
+    $response = Invoke-RestMethod -Uri $blobServiceUrl -Method Get -Headers $headers
+    $blobNames = @()
+    if ($response.EnumerationResults.Blobs.Blob -is [Array]) {
+        $blobNames = $response.EnumerationResults.Blobs.Blob | Where-Object { $_.Name -like '*.json' } | ForEach-Object { $_.Name }
+    } elseif ($response.EnumerationResults.Blobs.Blob) {
+        if ($response.EnumerationResults.Blobs.Blob.Name -like '*.json') {
+            $blobNames = @($response.EnumerationResults.Blobs.Blob.Name)
+        }
+    }
+    if ($maxPersons -gt 0) {
+        $blobNames = $blobNames | Select-Object -First $maxPersons
+    }
+    Write-Host "Found $($blobNames.Count) blobs to process."
+    foreach ($blobName in $blobNames) {
         try {
-            $blobContent = (Get-AzStorageBlobContent -Blob $blob.Name -Container 'persons' -Context $ctx -Force -Destination ([System.IO.Path]::GetTempFileName())).Content
-            $json = Get-Content $blobContent -Raw
-            $personData = $json | ConvertFrom-Json
+            $blobUrl = "https://$accountName.blob.core.windows.net/$container/$blobName"
+            $headers['Authorization'] = Get-BlobAuthHeader -method 'GET' -url $blobUrl -accountName $accountName -accountKey $accountKey
+            $blobContent = Invoke-RestMethod -Uri $blobUrl -Method Get -Headers $headers
+            $personData = $blobContent | ConvertFrom-Json
             foreach ($set in $conditionSet) {
                 $output = Test-ConditionSet -rules $set -data $personData
                 if ($output) {
                     $results += [PSCustomObject]@{
-                        File = $blob.Name
+                        File = $blobName
                         DisplayName = $personData.DisplayName
                         Match = $output
                     }
@@ -119,7 +147,7 @@ if (Test-Path $localPath) {
             }
         } catch {
             $results += [PSCustomObject]@{
-                File = $blob.Name
+                File = $blobName
                 Error = $_.Exception.Message
             }
         }
