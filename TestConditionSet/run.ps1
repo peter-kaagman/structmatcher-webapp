@@ -44,8 +44,8 @@ if ($body -and $body.maxPersons -ne $null) {
 
 # Importeer StructMatcher module
 Import-Module "$PSScriptRoot/../PS-Modules/StructMatcher/StructMatcher.psm1" -verbose $true
-# Importeer Blob storage module
-Import-Module 'Azure.Storage.Blobs' -Verbose $true
+# Importeer Az.Storage module
+Import-Module Az.Storage -Verbose $true
 
 
 # Sta toe dat conditionSet een enkele set of een array is
@@ -96,21 +96,16 @@ if (Test-Path $localPath) {
     if (-not $connectionString) {
         throw "AzureWebJobsStorage environment variable niet gevonden."
     }
-    $blobServiceClient = [Azure.Storage.Blobs.BlobServiceClient]::new($connectionString)
-    $containerClient = $blobServiceClient.GetBlobContainerClient('persons')
-    $blobs = $containerClient.GetBlobs() | Where-Object { $_.Name -like '*.json' }
+    $ctx = New-AzStorageContext -ConnectionString $connectionString
+    $blobs = Get-AzStorageBlob -Container 'persons' -Context $ctx | Where-Object { $_.Name -like '*.json' }
     if ($maxPersons -gt 0) {
         $blobs = $blobs | Select-Object -First $maxPersons
     }
     Write-Host "Found $($blobs.Count) blobs to process."
     foreach ($blob in $blobs) {
         try {
-            $blobClient = $containerClient.GetBlobClient($blob.Name)
-            $stream = New-Object System.IO.MemoryStream
-            $blobClient.DownloadTo($stream)
-            $stream.Position = 0
-            $reader = New-Object System.IO.StreamReader($stream)
-            $json = $reader.ReadToEnd()
+            $blobContent = (Get-AzStorageBlobContent -Blob $blob.Name -Container 'persons' -Context $ctx -Force -Destination ([System.IO.Path]::GetTempFileName())).Content
+            $json = Get-Content $blobContent -Raw
             $personData = $json | ConvertFrom-Json
             foreach ($set in $conditionSet) {
                 $output = Test-ConditionSet -rules $set -data $personData
