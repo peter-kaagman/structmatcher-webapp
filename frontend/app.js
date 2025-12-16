@@ -84,9 +84,13 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
     let resultText = '';
     try {
         const result = await response.json();
+        // Debug: log volledige response
+        console.log('Response van function:', result);
+        // Optioneel: toon response als debug boven het resultaat
+        resultText += `<details style="margin-bottom:1em;"><summary>Debug: volledige response</summary><pre>${JSON.stringify(result, null, 2)}</pre></details>`;
         if (Array.isArray(result)) {
             if (result.length === 0) {
-                resultText = 'Geen resultaten.';
+                resultText += 'Geen resultaten.';
             } else {
                 let matches = result.filter(r => r.Match);
                 let errors = result.filter(r => r.Error);
@@ -109,13 +113,16 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
                     });
                 }
                 if (matches.length === 0 && errors.length === 0) {
-                    resultText = 'Geen match gevonden.';
+                    resultText += 'Geen match gevonden.';
                 }
             }
         } else if (typeof result === 'string') {
-            resultText = result;
+            resultText += result;
+        } else if (typeof result === 'object' && result !== null) {
+            // Toon elk object als JSON
+            resultText += `<pre>${JSON.stringify(result, null, 2)}</pre>`;
         } else {
-            resultText = 'Geen match gevonden.';
+            resultText += 'Geen match gevonden.';
         }
     } catch {
         resultText = 'Ongeldig antwoord van server.';
